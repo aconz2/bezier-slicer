@@ -1,5 +1,6 @@
 import * as THREE from './three.js/build/three.module.js';
 import { TrackballControls } from './three.js/examples/jsm/controls/TrackballControls.js';
+import { OrbitControls } from './three.js/examples/jsm/controls/OrbitControls.js';
 var camera, scene, renderer, controls;
 
 const distanceTol = 1e-6;
@@ -37,7 +38,7 @@ function medianPoint(curve, n) {
 function concatCurves(curves, method) {
     method = method || 'line';
     var pieces = [];
-    for (var i = 0; i < curves.length - 1; i++) {
+    var append = (i) => {
         if (curves[i].type == 'CurvePath') {
             for (let c of curves[i].curves) {
                 pieces.push(c);
@@ -45,12 +46,12 @@ function concatCurves(curves, method) {
         } else {
             pieces.push(curves[i]);
         }
+    };
+    for (var i = 0; i < curves.length - 1; i++) {
+        append(i);
         var end = curveEnd(curves[i]);
         var start = curveStart(curves[i + 1]);
         if (end.distanceToSquared(start) > distanceTolSquared) {
-            // TODO: this is just a line I think with two points,
-            // What I really want is to use 2 more points, one on either curve
-            // and then crop the smoothed curve to start and end
             if (method == 'line') {
                 pieces.push(new THREE.LineCurve3(end, start));
             } else if (method == 'bezier') {
@@ -62,7 +63,8 @@ function concatCurves(curves, method) {
             }
         }
     }
-    pieces.push(curves[curves.length - 1]);
+    append(curves.length - 1);
+
     var ret = new THREE.CurvePath();
     ret.curves = pieces;
     return ret;
@@ -77,6 +79,12 @@ function rotatePoint(point, amount, origin) {
     return point.clone().rotateAround(origin, amount * Math.PI / 180);
 }
 
+function rotateAndScalePoint(point, rotation, scale, origin) {
+    var pointing = point.clone().sub(origin).setLength(point.distanceTo(origin) * scale);
+    var scaled = origin.clone().add(pointing);
+    return scaled.rotateAround(origin, rotation * Math.PI / 180);
+}
+
 function scaleCurve(curve, amount, origin) {
     let f = (pt) => scalePoint(pt, amount, origin);
     let c = curve;
@@ -86,6 +94,13 @@ function scaleCurve(curve, amount, origin) {
 
 function rotateCurve(curve, amount, origin) {
     let f = (pt) => rotatePoint(pt, amount, origin);
+    let c = curve;
+    if (c.type === 'LineCurve') return new THREE.LineCurve(f(c.v1), f(c.v2));
+    throw Error(`Unhandled curve ${curve.type}`);
+}
+
+function rotateAndScaleCurve(curve, rotation, scaling, origin) {
+    let f = (pt) => rotateAndScalePoint(pt, rotation, scaling, origin);
     let c = curve;
     if (c.type === 'LineCurve') return new THREE.LineCurve(f(c.v1), f(c.v2));
     throw Error(`Unhandled curve ${curve.type}`);
@@ -103,6 +118,13 @@ function rotatePath(path, amount, origin) {
     origin = origin || medianPoint(path);
     var ret = new THREE.CurvePath();
     ret.curves = path.curves.map((x) => rotateCurve(x, amount, origin));
+    return ret;
+}
+
+function rotateAndScalePath(path, rotation, scale, origin) {
+    origin = origin || medianPoint(path);
+    var ret = new THREE.CurvePath();
+    ret.curves = path.curves.map((x) => rotateAndScaleCurve(x, rotation, scale, origin));
     return ret;
 }
 
@@ -131,53 +153,114 @@ function process(curve, steps, layerHeight, f) {
     return acc;
 }
 
+function circleShape(steps, diameter) {
+    var pts = [];
+    var r = diameter / 2;
+    var theta = 2 * Math.PI / steps;
+    for (var i = 0; i < steps; i++) {
+        pts.push(new THREE.Vector2(r * Math.cos(i * theta), r * Math.sin(i * theta)));
+    }
+    pts.push(pts[0]);
+    return new THREE.Shape(pts);
+}
+
+function spacePoints(points, min, max) {
+    var diff = (max - min) / points.length;
+    for (var i = 0; i < points.length; i++) {
+        points[i].setZ(min + i * diff);
+    }
+}
+
+function pointsToCurvePath(points) {
+    var curves = [];
+    for (var i = 0; i < points.length - 1; i++) {
+        curves.push(new THREE.LineCurve3(points[i], points[i + 1]));
+    }
+    var ret = new THREE.CurvePath();
+    ret.curves = curves;
+    return ret;
+}
+
 function init() {
+    THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);
+
+    var divisionsEvery = 10;
+    var buildPlate = 220;
+
 	renderer = new THREE.WebGLRenderer();
 	renderer.setPixelRatio(window.devicePixelRatio);
 	renderer.setSize(window.innerWidth, window.innerHeight);
-	document.body.appendChild(renderer.domElement);
+	document.querySelector('#preview').appendChild(renderer.domElement);
 
 	scene = new THREE.Scene();
-	scene.background = new THREE.Color(0x222222);
+	scene.background = new THREE.Color(0x333333);
 
 	camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
-	camera.position.set(0, 0, 500);
+	camera.position.set(buildPlate, -buildPlate, buildPlate);
+    // camera.up.set(0,0,1);
 
-	controls = new TrackballControls(camera, renderer.domElement);
-	controls.minDistance = 200;
-	controls.maxDistance = 500;
+	// controls = new TrackballControls(camera, renderer.domElement);
+	// controls.minDistance = 200;
+	// controls.maxDistance = 500;
+    // controls.rotateSpeed = 1.5;
 
-	scene.add(new THREE.AmbientLight(0x222222));
-	var light = new THREE.PointLight(0xffffff);
+	controls = new OrbitControls(camera, renderer.domElement);
+
+	scene.add(new THREE.AmbientLight(0x222222, 5));
+	var light = new THREE.PointLight(0xffffff, 0.5);
 	light.position.copy(camera.position);
 	scene.add(light);
 
-	var extrudeProfile = new THREE.Shape([
-        new THREE.Vector2(0, 0),
-        new THREE.Vector2(5, 0),
-        new THREE.Vector2(5, 5),
-        new THREE.Vector2(0, 5),
-    ]);
+	// var planeGeometry = new THREE.PlaneBufferGeometry( 2000, 2000 );
+	// planeGeometry.rotateX( - Math.PI / 2 );
+	// var planeMaterial = new THREE.ShadowMaterial( { opacity: 0.2 } );
+	// var plane = new THREE.Mesh( planeGeometry, planeMaterial );
+	// plane.position.y = -1;
+	// plane.receiveShadow = true;
+	// scene.add( plane );
 
-    var shape = new THREE.Shape([
-        new THREE.Vector2(0, 0),
-        new THREE.Vector2(100, 0),
-        new THREE.Vector2(100, 100),
-        new THREE.Vector2(0, 100),
-        new THREE.Vector2(0, 0),
-    ]);
+	var grid = new THREE.GridHelper(buildPlate, buildPlate / divisionsEvery);
+	// grid.position.y = - 199;
+	grid.rotateX(- Math.PI / 2 );
+	grid.material.opacity = 0.25;
+	grid.material.transparent = true;
+	scene.add(grid);
 
-    var foo = process(shape, 5, 20, (c, _, i) => rotatePath(scalePath(c, 1 + i/10), i * 10));
+    var axesHelper = new THREE.AxesHelper(5);
+    scene.add(axesHelper);
+
+    var extrudeProfile = circleShape(8, 1);
+    console.log(extrudeProfile);
+
+    var shape = circleShape(8, 100);
+
+    var origin = medianPoint(shape);
+    // var foo = process(shape, 100, 1, (c, _, i) => rotatePath(scalePath(c, 1 + i/100), i * 1));
+    var layers = 10;
+    var layerHeight = 1;
+    var foo = process(shape, layers, layerHeight, (c, _, i) => rotateAndScalePath(c, i, 1 + i/200, origin));
     var path = concatCurves(foo);
-    // var path = curveTo3At(shape, 0);
+    var points = path.getSpacedPoints(Math.floor(path.getLength()));
+    spacePoints(points, layerHeight, (layers + 1) * layerHeight);
+    var printReady = pointsToCurvePath(points);
+
+    console.log(points);
+    console.log(foo);
+    console.log(path);
+    console.log('hi');
+    var stepsPerLength = 0.5;
 	var extrudeSettings = {
-		steps: path.getLength(),
+		steps: Math.floor(path.getLength() * stepsPerLength),
 		bevelEnabled: false,
-		extrudePath: path
+		// extrudePath: path
+		extrudePath: printReady
 	};
 	var geometry = new THREE.ExtrudeBufferGeometry(extrudeProfile, extrudeSettings);
-	var material = new THREE.MeshLambertMaterial({ color: 0xb00000, wireframe: false });
+	var material = new THREE.MeshLambertMaterial({ color: 0x2194ce, wireframe: false });
 	var mesh = new THREE.Mesh(geometry, material);
+    console.log(geometry);
+    console.log(mesh);
+    console.log(material);
 	scene.add(mesh);
 }
 
