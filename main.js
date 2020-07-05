@@ -2,8 +2,13 @@ import * as THREE from './three.js/build/three.module.js';
 // import {TrackballControls} from './three.js/examples/jsm/controls/TrackballControls.js';
 import {OrbitControls} from './three.js/examples/jsm/controls/OrbitControls.js';
 import {curveTo3At} from './util.js';
+import {SVGPreview} from './svgPreview.js';
+import {CurveEditor} from './curveEditor.js';
 
 var camera, scene, renderer, controls;
+
+var rotationEditor;
+var scaleEditor;
 
 const distanceTol = 1e-6;
 const distanceTolSquared = Math.pow(distanceTol, 2);
@@ -174,9 +179,12 @@ function init() {
     var divisionsEvery = 10;
     var buildPlate = 220;
 
+    const width = 600;
+    const height = 400;
+
 	renderer = new THREE.WebGLRenderer();
 	renderer.setPixelRatio(window.devicePixelRatio);
-	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.setSize(width, height);
 	document.querySelector('#preview').appendChild(renderer.domElement);
 
 	scene = new THREE.Scene();
@@ -184,12 +192,6 @@ function init() {
 
 	camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
 	camera.position.set(buildPlate, -buildPlate, buildPlate);
-    // camera.up.set(0,0,1);
-
-	// controls = new TrackballControls(camera, renderer.domElement);
-	// controls.minDistance = 200;
-	// controls.maxDistance = 500;
-    // controls.rotateSpeed = 1.5;
 
 	controls = new OrbitControls(camera, renderer.domElement);
 
@@ -249,10 +251,15 @@ function init() {
     console.log(mesh);
     console.log(material);
 	scene.add(mesh);
+
+    rotationEditor = new CurveEditor(document.querySelector('#rotationCurves'), {yRange: [-360, 360]});
+    scaleEditor = new CurveEditor(document.querySelector('#scaleCurves'), {yRange: [-5, 5]});
 }
 
 function animate() {
 	requestAnimationFrame(animate);
 	controls.update();
 	renderer.render(scene, camera);
+    rotationEditor.render();
+    scaleEditor.render();
 }

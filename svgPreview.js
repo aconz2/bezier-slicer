@@ -22,6 +22,8 @@ export function SVGPreview(url, container, opt) {
 
     this.camera.position.set(0, 0, 10);
 
+    this.onChange = (() => {});
+
 	this.renderer = new THREE.WebGLRenderer({antialias: true});
 	this.renderer.setPixelRatio(window.devicePixelRatio);
 	this.renderer.setSize(width, height);
@@ -83,6 +85,7 @@ export function SVGPreview(url, container, opt) {
         this.camera.top = bb.max.y + margin;
         this.camera.bottom = bb.min.y - margin;
         this.camera.updateProjectionMatrix();
+        this.onChange(this.meshes[i]);
     };
 
 

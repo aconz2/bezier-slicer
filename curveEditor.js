@@ -167,7 +167,6 @@ export function CurveEditor(container, opt) {
     this.container.ondblclick = (event) => {
         event.preventDefault();
         this.setMouseVector(event);
-        // TODO: we could find the insertion point (by binary search too by X) or just insert it and then sort...
         if (closed) {
             // argmin
             let line = new THREE.Line3();
@@ -183,6 +182,7 @@ export function CurveEditor(container, opt) {
             this.curve.points.splice(i + 1, 0, this.mouseVector.clone());
             this.circles.splice(i + 1, 0, this.addCircle(this.mouseVector.clone()));
         } else {
+            // TODO: we could find the insertion point (by binary search too by X) or just insert it and then sort...
             this.curve.points.push(this.mouseVector.clone());
             this.circles.push(this.addCircle(this.mouseVector.clone()));
             this.curve.points.sort((a, b) => a.x - b.x);
