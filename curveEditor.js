@@ -1,17 +1,4 @@
 import * as THREE from './three.js/build/three.module.js';
-import {debounce} from './util.js';
-
-// var camera, scene, renderer;
-
-// var geometry;
-// var circle;
-
-// var left, right, top, bottom;
-var curveEditor1;
-var curveEditor2;
-
-init();
-animate();
 
 function label(text, style) {
     style = style || {};
@@ -23,7 +10,7 @@ function label(text, style) {
     return ret;
 }
 
-function CurveEditor(container, opt) {
+export function CurveEditor(container, opt) {
     opt = opt || {};
     this.container = container;
 
@@ -34,7 +21,7 @@ function CurveEditor(container, opt) {
     const width = opt.width || 400;
     const height = opt.height || 200;
     const gridSize =  Math.max(width, height);
-    const nPoints = 50;
+    const pointsPerLength = 0.25;
 
     const top    =  height / 2;
     const bottom = -height / 2;
@@ -53,7 +40,7 @@ function CurveEditor(container, opt) {
     this.container.appendChild(this.minYLabel);
     this.container.appendChild(this.maxYLabel);
 
-	this.renderer = new THREE.WebGLRenderer();
+	this.renderer = new THREE.WebGLRenderer({antialias: true});
 	this.renderer.setPixelRatio(window.devicePixelRatio);
 	this.renderer.setSize(width, height);
 	this.container.appendChild(this.renderer.domElement);
@@ -88,6 +75,7 @@ function CurveEditor(container, opt) {
     this.curveGeometry = new THREE.BufferGeometry();
 
     this.updateCurve = () => {
+        let nPoints = Math.floor(this.curve.getLength() * pointsPerLength);
         this.curveGeometry.setFromPoints(this.curve.getPoints(nPoints));
     };
 
@@ -161,20 +149,20 @@ function CurveEditor(container, opt) {
         event.preventDefault();
         if (event.buttons === 1) { // left click
             this.dragging = this.getClosestCircle(event);
-            console.log(`Now dragging ${this.dragging}`)
+            // console.log(`Now dragging ${this.dragging}`)
         }
     };
 
     this.container.onmouseup = (event) => {
         event.preventDefault();
-        console.log(`up on ${this.dragging}`)
+        // console.log(`up on ${this.dragging}`)
         this.dragging = null;
     };
 
     this.container.onmousemove = (event) => {
         event.preventDefault();
         if (this.dragging !== null) {
-            console.log(`mousemove ${this.dragging}`)
+            // console.log(`mousemove ${this.dragging}`)
             this.setMouseVector(event);
             if (this.dragging === 0) {
                 this.mouseVector.setX(left);
@@ -205,29 +193,4 @@ function CurveEditor(container, opt) {
         return this.curve.getPoints(n - 1).map(p => THREE.MathUtils.mapLinear(p.y, bottom, top, this.minY, this.maxY))
     };
 
-}
-
-function init() {
-    THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);
-
-    var editorNode1 = document.querySelector('#editor1');
-    var editorNode2 = document.querySelector('#editor2');
-
-    curveEditor1 = new CurveEditor(editorNode1, {width: 400, height: 200, yRange: [-360, 360]});
-    curveEditor2 = new CurveEditor(editorNode2, {width: 400, height: 200, yRange: [-5, 5]});
-
-    curveEditor1.onChange = debounce(() => {
-        console.log(curveEditor1.getPoints(10));
-    }, 500);
-}
-
-function randomWalk(magnitude) {
-    return Math.random() * magnitude - magnitude/2;
-}
-
-function animate() {
-	requestAnimationFrame(animate);
-	// renderer.render(scene, camera);
-    curveEditor1.render();
-    curveEditor2.render();
 }

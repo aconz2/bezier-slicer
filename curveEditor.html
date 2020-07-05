@@ -1,21 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<title>CurveEditor Test</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<style>
-			body {
-				background-color: #222;
-			}
-			a {
-				color: #f80;
-			}
-		</style>
-	</head>
-	<body>
-      <div id="editor1"></div>
-      <div id="editor2"></div>
-	  <script src="./curveEditor.js" type="module"></script>
-	</body>
+  <head>
+	<title>CurveEditor Test</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<style>
+	  body {
+		  background-color: #222;
+	  }
+	  a {
+		  color: #f80;
+	  }
+	</style>
+  </head>
+  <body>
+    <div id="editor1"></div>
+    <div id="editor2"></div>
+	<!-- <script src="./curveEditor.js" type="module"></script> -->
+    <script type="module"t>
+      import {CurveEditor} from './curveEditor.js';
+      import {debounce} from './util.js';
+      var curveEditor1;
+      var curveEditor2;
+
+      init();
+      animate();
+
+      function init() {
+          var editorNode1 = document.querySelector('#editor1');
+          var editorNode2 = document.querySelector('#editor2');
+
+          curveEditor1 = new CurveEditor(editorNode1, {width: 400, height: 200, yRange: [-360, 360]});
+          curveEditor2 = new CurveEditor(editorNode2, {width: 400, height: 400, yRange: [-5, 5]});
+
+          curveEditor1.onChange = debounce(() => {
+              console.log(curveEditor1.getPoints(10));
+          }, 500);
+      }
+
+      function animate() {
+	      requestAnimationFrame(animate);
+	      // renderer.render(scene, camera);
+          curveEditor1.render();
+          curveEditor2.render();
+      }
+
+    </script>
+  </body>
 </html>
