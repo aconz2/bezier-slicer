@@ -1,4 +1,5 @@
 import * as THREE from './three.js/build/three.module.js';
+import {debounce} from './util.js';
 
 // var camera, scene, renderer;
 
@@ -11,6 +12,16 @@ var curveEditor2;
 
 init();
 animate();
+
+function label(text, style) {
+    style = style || {};
+    let ret = document.createElement('span');
+    ret.innerText = text;
+    for (let k in style) {
+        ret.style[k] = style[k];
+    }
+    return ret;
+}
 
 function CurveEditor(container, opt) {
     opt = opt || {};
@@ -30,6 +41,18 @@ function CurveEditor(container, opt) {
     const right  =  width / 2;
     const left   = -width / 2;
 
+    let yRange = opt.yRange || [-1, 1];
+    this.minY = yRange[0];
+    this.maxY = yRange[1];
+
+    this.onChange = opt.onChange || (() => {});
+
+    this.container.style.position = 'relative';
+    this.minYLabel = label(`${this.minY}`, {'pointer-events': 'none', 'color': 'white', 'position': 'absolute', 'bottom': '10px'});
+    this.maxYLabel = label(`${this.maxY}`, {'pointer-events': 'none', 'color': 'white', 'position': 'absolute'});
+    this.container.appendChild(this.minYLabel);
+    this.container.appendChild(this.maxYLabel);
+
 	this.renderer = new THREE.WebGLRenderer();
 	this.renderer.setPixelRatio(window.devicePixelRatio);
 	this.renderer.setSize(width, height);
@@ -38,15 +61,12 @@ function CurveEditor(container, opt) {
 	this.scene = new THREE.Scene();
 	this.scene.background = new THREE.Color(0x333333);
 
-	// this.scene.add(new THREE.AmbientLight(0x222222, 5));
-
     this.camera = new THREE.OrthographicCamera(left, right, top, bottom);
     this.camera.position.set(0, 0, 1);
 
-
 	let grid = new THREE.GridHelper(gridSize, gridSize / divisions);
     grid.position.y = -1;
-	grid.rotateX(- Math.PI / 2 );
+	grid.rotateX(-Math.PI / 2);
 	grid.material.opacity = 0.25;
 	grid.material.transparent = true;
     this.scene.add(grid);
@@ -91,8 +111,8 @@ function CurveEditor(container, opt) {
     const mouseOffsetY = (height / 2);
     this.setMouseVector = (event) => {
         // what a nightmare
-        this.mouseVector.x = event.pageX - event.target.offsetLeft - mouseOffsetX;
-        this.mouseVector.y = height - (event.pageY - event.target.offsetTop) - mouseOffsetY;
+        this.mouseVector.x = event.pageX - this.container.offsetLeft - mouseOffsetX;
+        this.mouseVector.y = height - (event.pageY - this.container.offsetTop) - mouseOffsetY;
     };
 
     // TODO we could binary search by X
@@ -107,7 +127,6 @@ function CurveEditor(container, opt) {
     };
 
     this.container.onmouseclick = (event) => {
-        event.stopPropagation();
         event.preventDefault();
         if (event.buttons === 2) { // right click
             let i = this.getClosestCircle(event);
@@ -116,11 +135,13 @@ function CurveEditor(container, opt) {
                 this.circles.splice(i, 1);
                 this.curve.points.splice(i, 1);
                 this.updateCurve();
+                this.onChange();
             }
         }
     };
 
     this.container.ondblclick = (event) => {
+        event.preventDefault();
         this.setMouseVector(event);
         // TODO: we could find the insertion point (by binary search too by X) or just insert it and then sort...
         this.curve.points.push(this.mouseVector.clone());
@@ -128,6 +149,7 @@ function CurveEditor(container, opt) {
         this.curve.points.sort((a, b) => a.x - b.x);
         this.circles.sort((a, b) => a.position.x - b.position.x);
         this.updateCurve();
+        this.onChange();
     };
 
     this.container.addEventListener('contextmenu', (event) => {
@@ -136,17 +158,23 @@ function CurveEditor(container, opt) {
     }, false);
 
     this.container.onmousedown = (event) => {
+        event.preventDefault();
         if (event.buttons === 1) { // left click
             this.dragging = this.getClosestCircle(event);
+            console.log(`Now dragging ${this.dragging}`)
         }
     };
 
     this.container.onmouseup = (event) => {
+        event.preventDefault();
+        console.log(`up on ${this.dragging}`)
         this.dragging = null;
     };
 
     this.container.onmousemove = (event) => {
+        event.preventDefault();
         if (this.dragging !== null) {
+            console.log(`mousemove ${this.dragging}`)
             this.setMouseVector(event);
             if (this.dragging === 0) {
                 this.mouseVector.setX(left);
@@ -156,6 +184,7 @@ function CurveEditor(container, opt) {
             this.circles[this.dragging].position.copy(this.mouseVector);
             this.curve.points[this.dragging].copy(this.mouseVector);
             this.updateCurve();
+            this.onChange();
         } else {
             let i = this.getClosestCircle(event);
             this.pointerCircle.position.copy(this.mouseVector);
@@ -172,6 +201,10 @@ function CurveEditor(container, opt) {
 	    this.renderer.render(this.scene, this.camera);
     };
 
+    this.getPoints = (n) => {
+        return this.curve.getPoints(n - 1).map(p => THREE.MathUtils.mapLinear(p.y, bottom, top, this.minY, this.maxY))
+    };
+
 }
 
 function init() {
@@ -180,9 +213,12 @@ function init() {
     var editorNode1 = document.querySelector('#editor1');
     var editorNode2 = document.querySelector('#editor2');
 
-    curveEditor1 = new CurveEditor(editorNode1, {width: 400, height: 200});
-    curveEditor2 = new CurveEditor(editorNode2, {width: 400, height: 200});
+    curveEditor1 = new CurveEditor(editorNode1, {width: 400, height: 200, yRange: [-360, 360]});
+    curveEditor2 = new CurveEditor(editorNode2, {width: 400, height: 200, yRange: [-5, 5]});
 
+    curveEditor1.onChange = debounce(() => {
+        console.log(curveEditor1.getPoints(10));
+    }, 500);
 }
 
 function randomWalk(magnitude) {
