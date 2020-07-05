@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+	<title>SVG Test</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<style>
+	  body {
+		  background-color: #222;
+	  }
+	</style>
+  </head>
+  <body>
+    <div id="preview"></div>
+	<script src="./svgLoader.js" type="module"></script>
+    <script type="module"t>
+      import {SVGPreview} from './svgLoader.js';
+      // import {debounce} from './util.js';
+      let svgPreview = new SVGPreview(document.querySelector('#preview'));
+
+      animate();
+
+      function animate() {
+	      requestAnimationFrame(animate);
+	      // renderer.render(scene, camera);
+          svgPreview.render();
+      }
+
+    </script>
+  </body>
+</html>

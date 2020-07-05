@@ -1,6 +1,8 @@
 import * as THREE from './three.js/build/three.module.js';
-import { TrackballControls } from './three.js/examples/jsm/controls/TrackballControls.js';
-import { OrbitControls } from './three.js/examples/jsm/controls/OrbitControls.js';
+// import {TrackballControls} from './three.js/examples/jsm/controls/TrackballControls.js';
+import {OrbitControls} from './three.js/examples/jsm/controls/OrbitControls.js';
+import {curveTo3At} from './util.js';
+
 var camera, scene, renderer, controls;
 
 const distanceTol = 1e-6;
@@ -128,22 +130,6 @@ function rotateAndScalePath(path, rotation, scale, origin) {
     return ret;
 }
 
-function vector2to3(v2, z) {
-    return new THREE.Vector3(v2.x, v2.y, z);
-}
-
-function curveTo3At(curve, height) {
-    let f = (v) => vector2to3(v, height);
-    let c = curve;
-    if (c.type === 'CubicBezierCurve') return new THREE.CubicBezierCurve3(f(c.v0), f(c.v1), f(c.v2), f(c.v3));
-    if (c.type === 'Shape' || c.type === 'CurvePath') {
-        var ret = new THREE.CurvePath();
-        ret.curves = c.curves.map((x) => curveTo3At(x, height));
-        return ret;
-    }
-    if (c.type === 'LineCurve') return new THREE.LineCurve3(f(c.v1), f(c.v2)); // why does this use v1 and v2 and not v0 and v1 ??????
-    throw new Error(`Unhandled curve type ${curve.type}`)
-}
 
 function process(curve, steps, layerHeight, f) {
     var acc = [curveTo3At(curve, layerHeight)];
@@ -173,6 +159,7 @@ function spacePoints(points, min, max) {
 
 function pointsToCurvePath(points) {
     var curves = [];
+    // TODO this can use a curve geometry
     for (var i = 0; i < points.length - 1; i++) {
         curves.push(new THREE.LineCurve3(points[i], points[i + 1]));
     }
