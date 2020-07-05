@@ -10,6 +10,24 @@ function label(text, style) {
     return ret;
 }
 
+function circlePoints(steps, diameter) {
+    var pts = [];
+    var r = diameter / 2;
+    var theta = 2 * Math.PI / steps;
+    for (var i = 0; i < steps; i++) {
+        pts.push(new THREE.Vector3(r * Math.cos(i * theta), r * Math.sin(i * theta), 0));
+    }
+    return pts;
+}
+
+function curvePathLinePoints(path) {
+    var ret = [];
+    let curves = path.curves;
+    for (let line of curves) ret.push(line.v1);
+    ret.push(curves[curves.length - 1].v2);
+    return ret;
+}
+
 export function CurveEditor(container, opt) {
     opt = opt || {};
     this.container = container;
@@ -22,6 +40,9 @@ export function CurveEditor(container, opt) {
     const height = opt.height || 200;
     const gridSize =  Math.max(width, height);
     const pointsPerLength = 0.25;
+    const closed = opt.closed || false;
+    const lines = opt.lines || false;
+    const nSides = opt.nSides || 3;
 
     const top    =  height / 2;
     const bottom = -height / 2;
@@ -49,7 +70,7 @@ export function CurveEditor(container, opt) {
 	this.scene.background = new THREE.Color(0x333333);
 
     this.camera = new THREE.OrthographicCamera(left, right, top, bottom);
-    this.camera.position.set(0, 0, 1);
+    this.camera.position.set(0, 0, 10);
 
 	let grid = new THREE.GridHelper(gridSize, gridSize / divisions);
     grid.position.y = -1;
@@ -67,32 +88,44 @@ export function CurveEditor(container, opt) {
         return circle;
     };
 
-    this.curve = new THREE.CatmullRomCurve3( [
-	    new THREE.Vector3(left, 0, 0),
-	    new THREE.Vector3(0, 0, 0),
-	    new THREE.Vector3(right, 0, 0),
-    ]);
-    this.curveGeometry = new THREE.BufferGeometry();
+    if (closed) {
+        this.curve = new THREE.CatmullRomCurve3(circlePoints(nSides, Math.min(width, height) * 0.6));
+        this.curve.closed = true;
 
-    this.updateCurve = () => {
-        let nPoints = Math.floor(this.curve.getLength() * pointsPerLength);
-        this.curveGeometry.setFromPoints(this.curve.getPoints(nPoints));
-    };
+    } else {
+        this.curve = new THREE.CatmullRomCurve3( [
+	        new THREE.Vector3(left, 0, 0),
+	        new THREE.Vector3(0, 0, 0),
+	        new THREE.Vector3(right, 0, 0),
+        ]);
+    }
 
     this.circles = this.curve.points.map(this.addCircle);
 
     this.pointerCircle = new THREE.Mesh(new THREE.CircleGeometry(2, 32), new THREE.MeshBasicMaterial({color: 0x00ff00}));
     this.scene.add(this.pointerCircle);
 
+    this.curveGeometry = new THREE.BufferGeometry();
     this.curveMaterial = new THREE.LineBasicMaterial({color: curveColor});
     this.curveObject = new THREE.Line(this.curveGeometry, this.curveMaterial);
     this.scene.add(this.curveObject);
+
+    this.updateCurve = () => {
+        if (lines) {
+            let pts = this.curve.points.slice(0);
+            pts.push(pts[0]);
+            this.curveGeometry.setFromPoints(pts);
+        } else {
+            let nPoints = Math.floor(this.curve.getLength() * pointsPerLength);
+            this.curveGeometry.setFromPoints(this.curve.getPoints(nPoints));
+        }
+    };
 
     this.updateCurve();
 
     this.dragging = null;
 
-    const distanceThreshold = 10;
+    const distanceThreshold = circleSize * 2;
 
     this.mouseVector = new THREE.Vector3();
     const mouseOffsetX = (width / 2);
@@ -118,7 +151,10 @@ export function CurveEditor(container, opt) {
         event.preventDefault();
         if (event.buttons === 2) { // right click
             let i = this.getClosestCircle(event);
-            if (i !== null && i != 0 && i != this.circles.length - 1) {
+            if (i !== null && (
+                (!closed && i != 0 && i != this.circles.length - 1) ||
+                (closed && this.circles.length > 3)
+            )) {
                 this.scene.remove(this.circles[i]);
                 this.circles.splice(i, 1);
                 this.curve.points.splice(i, 1);
@@ -132,10 +168,26 @@ export function CurveEditor(container, opt) {
         event.preventDefault();
         this.setMouseVector(event);
         // TODO: we could find the insertion point (by binary search too by X) or just insert it and then sort...
-        this.curve.points.push(this.mouseVector.clone());
-        this.circles.push(this.addCircle(this.mouseVector.clone()));
-        this.curve.points.sort((a, b) => a.x - b.x);
-        this.circles.sort((a, b) => a.position.x - b.position.x);
+        if (closed) {
+            // argmin
+            let line = new THREE.Line3();
+            let closest = new THREE.Vector3();
+            let [i, distance] = this.curve.points.reduce((acc, cur, i, points) => {
+                let j = (i + 1) % points.length;
+                line.set(points[i], points[j]);
+                line.closestPointToPoint(this.mouseVector, true, closest);
+                let distance = closest.distanceTo(this.mouseVector);
+                if (distance < acc[1]) return [i, distance];
+                return acc;
+            }, [-1, 1e9]);
+            this.curve.points.splice(i + 1, 0, this.mouseVector.clone());
+            this.circles.splice(i + 1, 0, this.addCircle(this.mouseVector.clone()));
+        } else {
+            this.curve.points.push(this.mouseVector.clone());
+            this.circles.push(this.addCircle(this.mouseVector.clone()));
+            this.curve.points.sort((a, b) => a.x - b.x);
+            this.circles.sort((a, b) => a.position.x - b.position.x);
+        }
         this.updateCurve();
         this.onChange();
     };
@@ -164,9 +216,9 @@ export function CurveEditor(container, opt) {
         if (this.dragging !== null) {
             // console.log(`mousemove ${this.dragging}`)
             this.setMouseVector(event);
-            if (this.dragging === 0) {
+            if (!closed && this.dragging === 0) {
                 this.mouseVector.setX(left);
-            } else if (this.dragging === this.circles.length - 1) {
+            } else if (!closed && this.dragging === this.circles.length - 1) {
                 this.mouseVector.setX(right);
             }
             this.circles[this.dragging].position.copy(this.mouseVector);
@@ -192,5 +244,7 @@ export function CurveEditor(container, opt) {
     this.getPoints = (n) => {
         return this.curve.getPoints(n - 1).map(p => THREE.MathUtils.mapLinear(p.y, bottom, top, this.minY, this.maxY))
     };
+
+    // this.asLineCurvePath = () {}
 
 }

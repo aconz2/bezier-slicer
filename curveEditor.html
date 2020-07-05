@@ -16,33 +16,27 @@
   <body>
     <div id="editor1"></div>
     <div id="editor2"></div>
+    <div id="editor3"></div>
 	<!-- <script src="./curveEditor.js" type="module"></script> -->
     <script type="module"t>
       import {CurveEditor} from './curveEditor.js';
       import {debounce} from './util.js';
-      var curveEditor1;
-      var curveEditor2;
+      var curveEditor1 = new CurveEditor(document.querySelector('#editor1'), {width: 400, height: 200, yRange: [-360, 360]});
+      var curveEditor2 = new CurveEditor(document.querySelector('#editor2'), {width: 400, height: 400, yRange: [-5, 5], closed: true, lines: true});
+      var curveEditor3 = new CurveEditor(document.querySelector('#editor3'), {width: 400, height: 400, yRange: [-200, 200], closed: true});
 
-      init();
+      curveEditor1.onChange = debounce(() => {
+          console.log(curveEditor1.getPoints(10));
+      }, 500);
+
       animate();
-
-      function init() {
-          var editorNode1 = document.querySelector('#editor1');
-          var editorNode2 = document.querySelector('#editor2');
-
-          curveEditor1 = new CurveEditor(editorNode1, {width: 400, height: 200, yRange: [-360, 360]});
-          curveEditor2 = new CurveEditor(editorNode2, {width: 400, height: 400, yRange: [-5, 5]});
-
-          curveEditor1.onChange = debounce(() => {
-              console.log(curveEditor1.getPoints(10));
-          }, 500);
-      }
 
       function animate() {
 	      requestAnimationFrame(animate);
 	      // renderer.render(scene, camera);
           curveEditor1.render();
           curveEditor2.render();
+          curveEditor3.render();
       }
 
     </script>
