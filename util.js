@@ -15,8 +15,12 @@ export function debounce(func, wait, immediate) {
   };
 };
 
-function vector2to3(v2, z) {
+export function vector2to3(v2, z) {
     return new THREE.Vector3(v2.x, v2.y, z);
+}
+
+export function vector3to2(v3) {
+    return new THREE.Vector2(v3.x, v3.y);
 }
 
 export function curveTo3At(curve, height) {
@@ -29,5 +33,6 @@ export function curveTo3At(curve, height) {
         return ret;
     }
     if (c.type === 'LineCurve') return new THREE.LineCurve3(f(c.v1), f(c.v2)); // why does this use v1 and v2 and not v0 and v1 ??????
+    if (c.type === 'CatmullRomCurve3') return curve;
     throw new Error(`Unhandled curve type ${curve.type}`)
 }

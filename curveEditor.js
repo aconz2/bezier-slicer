@@ -1,4 +1,5 @@
 import * as THREE from './three.js/build/three.module.js';
+import {vector3to2} from './util.js';
 
 function label(text, style) {
     style = style || {};
@@ -41,17 +42,21 @@ export function CurveEditor(container, opt) {
     const gridSize =  Math.max(width, height);
     const pointsPerLength = 0.25;
     const closed = opt.closed || false;
-    const lines = opt.lines || false;
     const nSides = opt.nSides || 3;
+    const showAxis = opt.showAxis || false;
 
     const top    =  height / 2;
     const bottom = -height / 2;
     const right  =  width / 2;
     const left   = -width / 2;
 
+    this.lines = opt.lines || false;
+
     let yRange = opt.yRange || [-1, 1];
     this.minY = yRange[0];
     this.maxY = yRange[1];
+
+    const baseLine = THREE.MathUtils.mapLinear(opt.baseLine || 0, yRange[0], yRange[1], bottom, top);
 
     this.onChange = opt.onChange || (() => {});
 
@@ -79,6 +84,23 @@ export function CurveEditor(container, opt) {
 	grid.material.transparent = true;
     this.scene.add(grid);
 
+    if (showAxis) {
+        let material = new THREE.LineDashedMaterial({
+	        color: 0xffffff,
+	        linewidth: 1,
+	        scale: 1,
+	        dashSize: 2,
+	        gapSize: 5,
+        });
+        let geometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(left, 0, 0),
+            new THREE.Vector3(right, 0, 0),
+        ])
+        let line = new THREE.Line(geometry, material);
+        line.computeLineDistances();
+        this.scene.add(line);
+    }
+
     this.circleMaterial = new THREE.MeshBasicMaterial({color: circleColor});
 
     this.addCircle = (point) => {
@@ -94,9 +116,9 @@ export function CurveEditor(container, opt) {
 
     } else {
         this.curve = new THREE.CatmullRomCurve3( [
-	        new THREE.Vector3(left, 0, 0),
-	        new THREE.Vector3(0, 0, 0),
-	        new THREE.Vector3(right, 0, 0),
+	        new THREE.Vector3(left, baseLine, 0),
+	        new THREE.Vector3(0, baseLine, 0),
+	        new THREE.Vector3(right, baseLine, 0),
         ]);
     }
 
@@ -104,6 +126,7 @@ export function CurveEditor(container, opt) {
 
     this.pointerCircle = new THREE.Mesh(new THREE.CircleGeometry(2, 32), new THREE.MeshBasicMaterial({color: 0x00ff00}));
     this.scene.add(this.pointerCircle);
+    this.pointerCircle.visible = false;
 
     this.curveGeometry = new THREE.BufferGeometry();
     this.curveMaterial = new THREE.LineBasicMaterial({color: curveColor});
@@ -111,7 +134,8 @@ export function CurveEditor(container, opt) {
     this.scene.add(this.curveObject);
 
     this.updateCurve = () => {
-        if (lines) {
+        this.cachedPoints = null;
+        if (this.lines) {
             let pts = this.curve.points.slice(0);
             pts.push(pts[0]);
             this.curveGeometry.setFromPoints(pts);
@@ -207,7 +231,6 @@ export function CurveEditor(container, opt) {
 
     this.container.onmouseup = (event) => {
         event.preventDefault();
-        // console.log(`up on ${this.dragging}`)
         this.dragging = null;
     };
 
@@ -223,6 +246,7 @@ export function CurveEditor(container, opt) {
             }
             this.circles[this.dragging].position.copy(this.mouseVector);
             this.curve.points[this.dragging].copy(this.mouseVector);
+            // console.log(this.mouseVector)
             this.updateCurve();
             this.onChange();
         } else {
@@ -241,10 +265,33 @@ export function CurveEditor(container, opt) {
 	    this.renderer.render(this.scene, this.camera);
     };
 
+    this.cachedPoints = null;
+    this.nCachedPoints = -1;
+
     this.getPoints = (n) => {
-        return this.curve.getPoints(n - 1).map(p => THREE.MathUtils.mapLinear(p.y, bottom, top, this.minY, this.maxY))
+        if (this.cachedPoints !== null && n === this.nCachedPoints) return this.cachedPoints;
+        this.cachedPoints = this.curve.getSpacedPoints(n - 1).map(p => THREE.MathUtils.mapLinear(p.y, bottom, top, this.minY, this.maxY))
+        this.nCachedPoints = n;
+        return this.cachedPoints;
     };
 
-    // this.asLineCurvePath = () {}
+    this.setLines = (lines) => {
+        this.lines = lines;
+        this.cachedPoints = null;
+        this.updateCurve();
+        this.onChange();
+    }
 
+    this.getCurve = () => {
+        if (closed && this.lines) {
+            let ret = new THREE.CurvePath();
+            let points = this.curve.points;
+            for (var i = 0; i < points.length; i++) {
+                ret.curves.push(new THREE.LineCurve3(points[i], points[(i + 1) % points.length]));
+            }
+            return ret
+        } else {
+            return this.curve;
+        }
+    };
 }

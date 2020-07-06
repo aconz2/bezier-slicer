@@ -7,19 +7,46 @@
 		<!-- <link type="text/css" rel="stylesheet" href="main.css"> -->
 		<style>
 			body {
-				background-color: #222;
+				background-color: #777;
 			}
 		</style>
 	</head>
 	<body>
       <div id="preview"></div>
+      <div>
+        <label>Preview Extrude</label>
+        <input type="checkbox" name="previewExtrude" />
+        <br />
+        <label>Number of Layers</label>
+        <input type="number" name="nLayers" value="100" min="1" />
+        <label>Layer Height (mm)</label>
+        <input type="number" name="layerHeight" value="0.2" step="0.1" min="0.01" />
+
+        <br />
+        <label>Computed Bounding Box: </label>
+        <span id="boundingBox"></span>
+      </div>
       <div id="curveEditors">
         <h5>Rotation</h5>
         <div id="rotationCurves"></div>
         <h5>Scale</h5>
         <div id="scaleCurves"></div>
       </div>
-      <div id="shape"></div>
+      <div>
+        <form id="chooseDrawingForm">
+          <input type="radio" name="source" value="draw" checked/>
+          <label>Draw</label>
+          <label>Lines?</label>
+          <input type="checkbox" name="lines" />
+
+          <input type="radio" name="source" value="svg" />
+          <label>SVG</label>
+        </form>
+        <div id="shapeDraw"></div>
+        <div id="shapeSvg">
+          <input type="file" name="svgFile" accept=".svg" />
+        </div>
+      </div>
       <div>
         <pre id="gcode"></pre>
       </div>
