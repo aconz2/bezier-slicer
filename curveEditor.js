@@ -88,13 +88,12 @@ export function CurveEditor(container, opt) {
         let material = new THREE.LineDashedMaterial({
 	        color: 0xffffff,
 	        linewidth: 1,
-	        scale: 1,
 	        dashSize: 2,
 	        gapSize: 5,
         });
         let geometry = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(left, 0, 0),
-            new THREE.Vector3(right, 0, 0),
+            new THREE.Vector3(left, baseLine, 0),
+            new THREE.Vector3(right, baseLine, 0),
         ])
         let line = new THREE.Line(geometry, material);
         line.computeLineDistances();

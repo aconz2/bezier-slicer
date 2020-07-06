@@ -36,3 +36,34 @@ export function curveTo3At(curve, height) {
     if (c.type === 'CatmullRomCurve3') return curve;
     throw new Error(`Unhandled curve type ${curve.type}`)
 }
+
+// based on https://krazydad.com/tutorials/makecolors.php
+export function colorGradient(points, freq, width, center) {
+    freq = freq || 1;
+    width = width || 0.5;
+    center = center || 0.5;
+    let ret = new Float32Array(3 * points.length);
+    for (var i = 0; i < points.length; i++) {
+        ret[i * 3]     = Math.sin(freq * i )    * width + center;
+        ret[i * 3 + 1] = Math.sin(freq * i + 2) * width + center;
+        ret[i * 3 + 2] = Math.sin(freq * i + 4) * width + center;
+    }
+    return ret;
+}
+
+export function colorGradientToCenter(points, freq, width, center) {
+    freq = freq || 1;
+    width = width || 0.5;
+    center = center || 0.5;
+    let origin = new THREE.Vector3(0, 0, 0);
+    let ret = new Float32Array(3 * points.length);
+    for (var i = 0; i < points.length; i++) {
+        origin.setZ(points[i].z);
+        let d = origin.distanceTo(points[i]);
+
+        ret[i * 3]     = Math.sin(freq * d ) * width + center;
+        ret[i * 3 + 1] = Math.sin(freq * d + 2) * width + center;
+        ret[i * 3 + 2] = Math.sin(freq * d + 4) * width + center;
+    }
+    return ret;
+}

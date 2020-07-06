@@ -17,9 +17,23 @@
         <label>Preview Extrude</label>
         <input type="checkbox" name="previewExtrude" />
         <br />
+
+        <label>Preview Rainbow</label>
+        <input type="checkbox" name="previewRainbow" />
+        <input type="radio" name="previewRainbowType" value="distance" checked />
+        <label>By Distance to center</label>
+        <input type="radio" name="previewRainbowType" value="layer" />
+        <label>By Layer</label>
+        <br />
+
+        <label>Clamp Distance</label>
+        <input type="checkbox" name="clampDistanceEnabled" />
+        <input type="number" name="clampDistance" min="0" step="0.1" value="1" />
+        <br />
+
         <label>Number of Layers</label>
         <input type="number" name="nLayers" value="100" min="1" />
-        <label>Layer Height (mm)</label>
+        <label>Layer Height</label>
         <input type="number" name="layerHeight" value="0.2" step="0.1" min="0.01" />
 
         <br />
