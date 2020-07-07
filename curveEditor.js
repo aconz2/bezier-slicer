@@ -154,16 +154,15 @@ export function CurveEditor(container, opt) {
     this.mouseVector = new THREE.Vector3();
     const mouseOffsetX = (width / 2);
     const mouseOffsetY = (height / 2);
-    console.log(height)
-    console.log(mouseOffsetY)
+    // console.log(height)
+    // console.log(mouseOffsetY)
+
+    let eventNode = this.canvas;
     this.setMouseVector = (event) => {
         // what a nightmare
-        // this.mouseVector.x = event.pageX - this.container.offsetLeft - mouseOffsetX;
-        // this.mouseVector.y = height - (event.pageY - this.container.offsetTop) - mouseOffsetY;
-
-        this.mouseVector.x = event.pageX - this.canvas.offsetLeft;
-        this.mouseVector.y = height - (event.pageY - this.canvas.offsetTop);
-        console.log(this.mouseVector)
+        let bounds = eventNode.getBoundingClientRect();
+        this.mouseVector.x = event.clientX - bounds.left - mouseOffsetX;
+        this.mouseVector.y = height - (event.clientY - bounds.top) - mouseOffsetY;
     };
 
     this.getClosestCircle = (event) => {
@@ -177,7 +176,8 @@ export function CurveEditor(container, opt) {
         return null;
     };
 
-    this.container.onmouseclick = (event) => {
+
+    eventNode.onmouseclick = (event) => {
         event.preventDefault();
         if (event.buttons === 2) { // right click
             let i = this.getClosestCircle(event);
@@ -194,7 +194,7 @@ export function CurveEditor(container, opt) {
         }
     };
 
-    this.container.ondblclick = (event) => {
+    eventNode.ondblclick = (event) => {
         event.preventDefault();
         this.setMouseVector(event);
         if (closed) {
@@ -224,10 +224,10 @@ export function CurveEditor(container, opt) {
 
     this.container.addEventListener('contextmenu', (event) => {
         event.preventDefault();
-        this.container.onmouseclick(event);
+        eventNode.onmouseclick(event);
     }, false);
 
-    this.container.onmousedown = (event) => {
+    eventNode.onmousedown = (event) => {
         event.preventDefault();
         if (event.buttons === 1) { // left click
             this.dragging = this.getClosestCircle(event);
@@ -235,12 +235,12 @@ export function CurveEditor(container, opt) {
         }
     };
 
-    this.container.onmouseup = (event) => {
+    eventNode.onmouseup = (event) => {
         event.preventDefault();
         this.dragging = null;
     };
 
-    this.container.onmousemove = (event) => {
+    eventNode.onmousemove = (event) => {
         event.preventDefault();
         if (this.dragging !== null) {
             // console.log(`mousemove ${this.dragging}`)
