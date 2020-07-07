@@ -6,6 +6,8 @@ import {CurveEditor} from './curveEditor.js';
 import {ChooseDrawing} from './chooseDrawing.js';
 import {medianPoint, colorGradient, colorGradientToCenter, debounce, curveTo3At, vector2to3, vector3to2} from './util.js';
 
+import * as G from './gcode.js';
+
 const distanceTol = 1e-6;
 const distanceTolSquared = Math.pow(distanceTol, 2);
 const debounceAmount = 200;
@@ -206,6 +208,67 @@ function formatBoundingBox(bbox) {
     return `${f(w)} × ${f(l)} × ${f(h)} | (${f(bbox.min.x)} — ${f(bbox.max.x)}, ${f(bbox.min.y)} — ${f(bbox.max.y)}, ${f(bbox.min.z)} — ${f(bbox.max.z)})`;
 }
 
+function autoExpand(el) {
+    el.addEventListener('input', () => {
+        el.style.height = '';
+        el.style.height = el.scrollHeight + 'px';
+    });
+    el.style.height = '';
+    el.style.height = el.scrollHeight + 'px';
+}
+
+function templateString(str, substitutions) {
+    for (let [k, v] of substitutions) {
+        str = str.replace(k, v);
+    }
+    return str;
+}
+
+function Gcode() {
+    this.nozzleTemperatureElement = document.querySelector('input[name="nozzleTemperature"]');
+    this.bedTemperatureElement = document.querySelector('input[name="bedTemperature"]');
+    this.lineWidthElement = document.querySelector('input[name="lineWidth"]');
+    this.gcodeFeedrateElement = document.querySelector('input[name="gcodeFeedrate"]');
+    this.gcodeHeaderElement = document.querySelector('#gcodeHeader');
+    this.gcodeFooterElement = document.querySelector('#gcodeFooter');
+    this.gcodeLinkElement = document.querySelector('#gcodeLink');
+    // yea i know this breaks any good sense of anything
+    this.layerHeightElement = document.querySelector('input[name="layerHeight"]');
+
+    this.gcodeHeaderElement.value = G.header;
+    this.gcodeFooterElement.value = G.footer;
+
+    autoExpand(this.gcodeHeaderElement);
+    autoExpand(this.gcodeFooterElement);
+
+    this.gcodeLinkElement.style.display = 'none';
+
+    this.setGcodeLink = (blob) => {
+        // TODO: do I need to hang onto the blob?
+        let url = URL.createObjectURL(blob);
+        this.gcodeLinkElement.href = url;
+        this.gcodeLinkElement.style.display = 'unset';
+    };
+
+    this.generateGcode = (points) => {
+        let feedrate = Number.parseInt(this.gcodeFeedrateElement.value) * 60;
+        let layerHeight = Number.parseFloat(this.layerHeightElement.value);
+        let lineWidth = Number.parseFloat(this.lineWidthElement.value);
+
+        let code = G.generateGcode(points, feedrate, lineWidth, layerHeight);
+        let subs = [
+            [/\$BED_TEMP/g, this.bedTemperatureElement.value],
+            [/\$HOTEND_TEMP/g, this.nozzleTemperatureElement.value],
+        ]
+        let b = new Blob([
+            templateString(this.gcodeHeaderElement.value, subs),
+            code,
+            templateString(this.gcodeFooterElement.value, subs),
+        ]);
+        this.setGcodeLink(b);
+    };
+}
+
 function Main() {
     THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);
 
@@ -217,11 +280,12 @@ function Main() {
 
     this.layers = 100;
     this.layerHeight = 0.2;
-    this.pointsPerLength = 1;
+    this.segmentLength = 1;
     this.previewPointsPerLength = 0.1;
     this.curve = null;
     this.clampDistance = this.layerHeight * 2;
     this.clampDistanceEnabled = false;
+    this.points = [];
 
     this.previewRainbow = true;
     this.previewRainbowType = 'distance';
@@ -236,10 +300,10 @@ function Main() {
     this.nLayersElement = document.querySelector('input[name="nLayers"]');
     this.layerHeightElement = document.querySelector('input[name="layerHeight"]');
     this.previewRainbowElement = document.querySelector('input[name="previewRainbow"]');
-    // this.previewRainbowTypeElement = document.querySelector('input[name="previewRainbowType"]');
     this.previewExtrudeElement = document.querySelector('input[name="previewExtrude"]');
     this.clampDistanceEnabledElement = document.querySelector('input[name="clampDistanceEnabled"]');
     this.clampDistanceElement = document.querySelector('input[name="clampDistance"]');
+    this.segmentLengthElement = document.querySelector('input[name="segmentLength"]');
 
     this.previewRainbowElement.checked = this.previewRainbow;
     this.clampDistanceEnabledElement.checked = this.clampDistanceEnabled;
@@ -303,8 +367,9 @@ function Main() {
 
         // TODO this can be simplified by only generating two points for a line if its longer than the min step length
         console.time('covertToLines');
-        let points = path.getSpacedPoints(Math.floor(path.getLength() * this.pointsPerLength));
+        let points = path.getSpacedPoints(Math.floor(path.getLength() / this.segmentLength));
         spacePoints(points, this.layerHeight, (this.layers + 1) * this.layerHeight);
+        this.points = points;
         console.timeEnd('covertToLines');
 
         this.boundingBoxElement.innerText = formatBoundingBox(this.computeBoundingBox(points));
@@ -373,10 +438,15 @@ function Main() {
         this.clampDistance = Number.parseFloat(event.target.value);
         this.updateDebounce();
     };
+    this.segmentLengthElement.oninput = (event) => {
+        this.segmentLength = Number.parseFloat(event.target.value);
+        this.updateDebounce();
+    };
     this.previewRainbowElement.oninput = (event) => {
         this.previewRainbow = event.target.checked;
         this.updateDebounce();
     };
+
     for (let el of document.querySelectorAll('input[name="previewRainbowType"]')) {
         el.onchange = (event) => {
             console.log(event)
@@ -396,4 +466,12 @@ function Main() {
 }
 
 let main = new Main();
+let g = new Gcode();
+let generateGcodeElement = document.querySelector('#generateGcode');
+
+generateGcodeElement.onclick = () => {
+    console.log(main)
+    g.generateGcode(main.points)
+};
+
 main.animate()

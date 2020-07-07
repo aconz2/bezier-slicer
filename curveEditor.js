@@ -167,7 +167,6 @@ export function CurveEditor(container, opt) {
 
     this.getClosestCircle = (event) => {
         this.setMouseVector(event);
-        console.log(this.mouseVector);
         for (var i = 0; i < this.circles.length; i++) {
             if (this.circles[i].position.distanceTo(this.mouseVector) < distanceThreshold) {
                 return i;
@@ -257,7 +256,6 @@ export function CurveEditor(container, opt) {
             this.onChange();
         } else {
             let i = this.getClosestCircle(event);
-        console.log(i)
             this.pointerCircle.position.copy(this.mouseVector);
             // console.log(this.mouseVector)
             if (i === null) {

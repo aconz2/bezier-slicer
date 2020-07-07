@@ -1,10 +1,10 @@
-export const header = `
-M140 S60  ; Set bed temperature
+export const header = `;Begin Header
+M140 S$BED_TEMP  ; Set bed temperature
 M105
-M190 S60  ; Wait for bed temp
-M104 S210 ; Set hotend temp
+M190 S$BED_TEMP  ; Wait for bed temp
+M104 S$HOTEND_TEMP ; Set hotend temp
 M105
-M109 S210 ; Wait for hotend
+M109 S$HOTEND_TEMP ; Wait for hotend
 
 ; Ender 3 Custom Start G-code
 G28 ; Home all axes
@@ -27,7 +27,7 @@ M205 X20 Y20 ; jerk
 ; Now goto start point and then run G1 F2400 E5 to get extruder back to 0
 `;
 
-export const footer = `
+export const footer = `;Begin Footer
 M140 S0
 M204 S4000
 M107 ; fan off
@@ -48,6 +48,42 @@ M82 ;absolute extrusion mode
 M104 S0
 `;
 
-export function generateGcode(points, lineWidth, layerHeight) {
+function circleArea(d) {
+    return Math.PI * Math.pow((d / 2), 2);
+}
+
+const precision = 2;
+const filamentDiameter = 1.75;  // TODO
+const filamentCrossSection = circleArea(filamentDiameter);
+
+function g1(v, e) {
+    return `G1 X${v.x.toFixed(precision)} Y${v.y.toFixed(precision)} Z${v.z.toFixed(precision)} E${e.toFixed(precision)}`;
+}
+
+// TODO I looked at this https://manual.slic3r.org/advanced/flow-math but I'm not sure the below is how I should actually
+// be calculating this
+// a rectangular prism that is 1 x lineWidth x layerHeight with cylinders 1 long x layerHeight
+function calcExtrudePerMm(layerHeight, lineWidth) {
+    let crossSectionArea = layerHeight * lineWidth + circleArea(layerHeight);
+    console.log(crossSectionArea);
+    return crossSectionArea / filamentCrossSection;
+}
+
+export function generateGcode(points, feedrate, lineWidth, layerHeight) {
+    let lines = [];
+
+    let extrudePerMm = calcExtrudePerMm(layerHeight, lineWidth);
+
+    lines.push(g1(points[0], 0) + '; start point');
+    lines.push('G1 F2400 E5 ; reset extruder');
+
+    lines.push('G1 F${feedrate}');
+
+    for (var i = 1; i < points.length; i++) {
+        let e = points[i].distanceTo(points[i - 1]) * extrudePerMm;
+        lines.push(g1(points[i], e));
+    }
+    lines.push('', '');
+    return lines.join('\n');
 
 }
