@@ -4,11 +4,11 @@ import {OrbitControls} from './three.js/examples/jsm/controls/OrbitControls.js';
 import {SVGPreview} from './svgPreview.js';
 import {CurveEditor} from './curveEditor.js';
 import {ChooseDrawing} from './chooseDrawing.js';
-import {colorGradient, colorGradientToCenter, debounce, curveTo3At, vector2to3, vector3to2} from './util.js';
+import {medianPoint, colorGradient, colorGradientToCenter, debounce, curveTo3At, vector2to3, vector3to2} from './util.js';
 
 const distanceTol = 1e-6;
 const distanceTolSquared = Math.pow(distanceTol, 2);
-const debounceAmount = 100;
+const debounceAmount = 200;
 
 function partial(f, x) {
     return f.bind(undefined, x);
@@ -32,17 +32,6 @@ function curveEnd(curve) {
     if (curve.type === 'LineCurve') return curve.v2
     if (curve.type === 'LineCurve3') return curve.v2
     throw Error(`Unhandled curve ${curve.type}`);
-}
-
-function medianPoint(curve, n) {
-    n = n || 100;
-    let points = curve.getSpacedPoints(n);
-    let acc = points[0];
-    for (let i = 0; i < points.length; i++) {
-        acc.add(points[i]);
-    }
-    acc.divideScalar(n);
-    return acc;
 }
 
 function concatCurves(curves, method) {
@@ -121,15 +110,24 @@ function apply232(f, v) {
     return vector2to3(f(vector3to2(v)), v.z);
 }
 
+// yea this is a mess
 function rotateAndScaleCurve(curve, rotation, scaling, origin, prevCurve, clampDistance) {
     if (curve.type === 'LineCurve') {
         let f = (k) => rotateAndScalePoint(curve[k], rotation, scaling, origin, prevCurve[k], clampDistance);
         return new THREE.LineCurve(f('v1'), f('v2'));
     }
     if (curve.type === 'LineCurve3') {
-        // yea this is a mess
         let f = (k, v) => rotateAndScalePoint(v, rotation, scaling, origin, vector3to2(prevCurve[k]), clampDistance);
         return new THREE.LineCurve(apply232(partial(f, 'v1'), curve.v1), apply232(partial(f, 'v2'), curve.v2));
+    }
+    if (curve.type === 'CubicBezierCurve3') {
+        let f = (k, v) => rotateAndScalePoint(v, rotation, scaling, origin, vector3to2(prevCurve[k]), clampDistance);
+        return new THREE.CubicBezierCurve3(
+            apply232(partial(f, 'v0'), curve.v0),
+            apply232(partial(f, 'v1'), curve.v1),
+            apply232(partial(f, 'v2'), curve.v2),
+            apply232(partial(f, 'v3'), curve.v3),
+        );
     }
     throw Error(`Unhandled curve ${curve.type}`);
 }
@@ -205,7 +203,7 @@ function formatBoundingBox(bbox) {
     let l = bbox.max.y - bbox.min.y;
     let h = bbox.max.z - bbox.min.z;
     let f = (x) => x.toFixed(2);
-    return `${f(w)} x ${f(l)} x ${f(h)} | (${f(bbox.min.x)} — ${f(bbox.max.x)}, ${f(bbox.min.y)} — ${f(bbox.max.y)}, ${f(bbox.min.z)} — ${f(bbox.max.z)})`;
+    return `${f(w)} × ${f(l)} × ${f(h)} | (${f(bbox.min.x)} — ${f(bbox.max.x)}, ${f(bbox.min.y)} — ${f(bbox.max.y)}, ${f(bbox.min.z)} — ${f(bbox.max.z)})`;
 }
 
 function Main() {

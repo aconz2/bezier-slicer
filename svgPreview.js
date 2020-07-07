@@ -1,5 +1,5 @@
 import {SVGLoader} from './three.js/examples/jsm/loaders/SVGLoader.js';
-import {curveTo3At} from './util.js';
+import {medianPoint, curveTo3At, centerCurve} from './util.js';
 import * as THREE from './three.js/build/three.module.js';
 
 export function SVGPreview(container, opt) {
@@ -53,6 +53,9 @@ export function SVGPreview(container, opt) {
     this.active = -1;
 
     this.load = (url) => {
+        for (let mesh of this.meshes) {
+            this.scene.remove(mesh);
+        }
         this.meshes = [];
         this.curves = [];
         for (let child of this.select.querySelectorAll('option')) {
@@ -66,7 +69,8 @@ export function SVGPreview(container, opt) {
             let geoms = [];
             for (let path of data.paths) {
                 for (let subPath of path.subPaths) {
-                    let curve = curveTo3At(subPath, 1);
+                    let curve = centerCurve(curveTo3At(subPath, 0));
+                    console.log(medianPoint(curve));
                     this.curves.push(curve);
                     let geom = new THREE.BufferGeometry();
                     let nPoints = Math.floor(curve.getLength() * pointsPerLength / subPath.curves.length);

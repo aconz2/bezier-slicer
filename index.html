@@ -18,36 +18,57 @@
             #curveEditors h4 {
                 margin: 10px 0;
             }
+
+            #previewWrapper {
+                display: flex;
+                flex-direction: row;
+            }
+            #previewWrapper > div {
+                padding-right: 10px;
+            }
+
+            #previewWrapper label {
+                display: inline-block;
+                width: 140px;
+            }
+
+            #gcode label {
+                display: inline-block;
+                width: 140px;
+            }
 		</style>
 	</head>
 	<body>
-      <div id="preview"></div>
-      <div>
-        <label>Preview Extrude</label>
-        <input type="checkbox" name="previewExtrude" />
-        <br />
+      <div id="previewWrapper">
+        <div id="preview"></div>
+        <div>
+          <label>Preview Extrude</label>
+          <input type="checkbox" name="previewExtrude" />
+          <br />
 
-        <label>Preview Rainbow</label>
-        <input type="checkbox" name="previewRainbow" />
-        <input type="radio" name="previewRainbowType" value="distance" checked />
-        <label>By Distance to center</label>
-        <input type="radio" name="previewRainbowType" value="layer" />
-        <label>By Layer</label>
-        <br />
+          <label>Preview Rainbow</label>
+          <input type="checkbox" name="previewRainbow" />
+          <input type="radio" name="previewRainbowType" value="distance" checked />
+          <label>By Distance to center</label>
+          <input type="radio" name="previewRainbowType" value="layer" />
+          <label>By Layer</label>
+          <br />
 
-        <label>Clamp Distance</label>
-        <input type="checkbox" name="clampDistanceEnabled" />
-        <input type="number" name="clampDistance" min="0" step="0.1" value="1" />
-        <br />
+          <label>Clamp Distance</label>
+          <input type="checkbox" name="clampDistanceEnabled" />
+          <input type="number" name="clampDistance" min="0" step="0.1" value="1" />
+          <br />
 
-        <label>Number of Layers</label>
-        <input type="number" name="nLayers" value="100" min="1" />
-        <label>Layer Height</label>
-        <input type="number" name="layerHeight" value="0.2" step="0.1" min="0.01" />
+          <label>Number of Layers</label>
+          <input type="number" name="nLayers" value="100" min="1" />
+          <br />
+          <label>Layer Height</label>
+          <input type="number" name="layerHeight" value="0.2" step="0.1" min="0.01" />
 
-        <br />
-        <label>Computed Bounding Box: </label>
-        <span id="boundingBox"></span>
+          <br />
+          <label>Computed Bounding Box: </label>
+          <span id="boundingBox"></span>
+        </div>
       </div>
       <div id="curveEditors">
         <div>
@@ -69,13 +90,30 @@
           <input type="radio" name="source" value="svg" />
           <label>SVG</label>
         </form>
-        <div id="shapeDraw"></div>
+        <div id="shapeDraw">
+        <!--   <input type="number" name="drawSides" value="3" step="1" min="3" /> -->
+        <!--   <button id="drawSidesButton">Generate Polygon</button> -->
+        <!--   <br/> -->
+        <!-- <br /> -->
+        </div>
         <div id="shapeSvg">
           <input type="file" name="svgFile" accept=".svg" />
         </div>
       </div>
-      <div>
-        <pre id="gcode"></pre>
+      <hr />
+      <div id="gcode">
+        <label>Nozzle Temperature</label>
+        <input type="number" name="nozzleTemperature" value="210" />
+        <br />
+        <label>Bed Temperature</label>
+        <input type="number" name="bedTemperature" value="60" />
+
+        <pre id="gcodeHeader">
+
+        </pre>
+        <pre id="gcodeFooter">
+
+        </pre>
       </div>
 	  <script src="./main.js" type="module"></script>
 	</body>

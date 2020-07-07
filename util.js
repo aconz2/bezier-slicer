@@ -23,18 +23,44 @@ export function vector3to2(v3) {
     return new THREE.Vector2(v3.x, v3.y);
 }
 
-export function curveTo3At(curve, height) {
-    let f = (v) => vector2to3(v, height);
+export function mapCurve(f, curve) {
     let c = curve;
     if (c.type === 'CubicBezierCurve') return new THREE.CubicBezierCurve3(f(c.v0), f(c.v1), f(c.v2), f(c.v3));
     if (c.type === 'Shape' || c.type === 'CurvePath' || c.type === 'Path') {
         var ret = new THREE.CurvePath();
-        ret.curves = c.curves.map((x) => curveTo3At(x, height));
+        ret.curves = c.curves.map((x) => mapCurve(f, x));
         return ret;
     }
     if (c.type === 'LineCurve') return new THREE.LineCurve3(f(c.v1), f(c.v2)); // why does this use v1 and v2 and not v0 and v1 ??????
-    if (c.type === 'CatmullRomCurve3') return curve;
+    if (c.type === 'LineCurve3') return new THREE.LineCurve3(f(c.v1), f(c.v2)); // why does this use v1 and v2 and not v0 and v1 ??????
+    if (c.type === 'CatmullRomCurve3') {
+        let ret = new THREE.CatmullRomCurve3(c.points.map(f));
+        ret.closed = c.closed;
+        return ret;
+    }
+    if (c.type === 'CubicBezierCurve3') return new THREE.CubicBezierCurve3(f(c.v0), f(c.v1), f(c.v2), f(c.v3));
     throw new Error(`Unhandled curve type ${curve.type}`)
+}
+
+export function curveTo3At(curve, height) {
+    return mapCurve((v) => vector2to3(v, height), curve);
+}
+
+export function medianPoint(curve, n) {
+    n = n || 100;
+    let points = curve.getSpacedPoints(n);
+    let acc = points[0];
+    for (let i = 0; i < points.length; i++) {
+        acc.add(points[i]);
+    }
+    acc.divideScalar(n);
+    return acc;
+}
+
+export function centerCurve(curve) {
+    let median = medianPoint(curve);
+    console.log(median)
+    return mapCurve((v) => v.clone().sub(median), curve);
 }
 
 // based on https://krazydad.com/tutorials/makecolors.php

@@ -1,6 +1,7 @@
 import {SVGPreview} from './svgPreview.js';
 import {CurveEditor} from './curveEditor.js';
 import {samplesvg} from './samplesvg.js';
+import * as THREE from './three.js/build/three.module.js';
 
 // TODO add the option in drawcurve to change between lines and catmull and an option to generate a new polygon with n sides
 
@@ -18,6 +19,8 @@ export function ChooseDrawing(onChange, opt) {
     this.divSvg = document.querySelector('#shapeSvg');
     this.svgFileInput = document.querySelector('input[name="svgFile"]');
     this.linesCheckbox = document.querySelector('input[name="lines"]');
+    this.drawSides = document.querySelector('input[name="drawSides"]');
+    this.drawSidesButton = document.querySelector('#drawSidesButton');
 
     const size = opt.size || 400;
 
@@ -26,7 +29,7 @@ export function ChooseDrawing(onChange, opt) {
     this.setActive = (kind) => {
         this.active = kind;
 
-        showOne([this.divDraw, this.divSvg], +(kind === 'draw'));
+        showOne([this.divDraw, this.divSvg], +(kind === 'svg'));
 
         if (kind === 'svg') {
             if (this.svgFileInput.files.length === 0) {
@@ -43,6 +46,20 @@ export function ChooseDrawing(onChange, opt) {
             this.setActive(event.target.value);
         }
     };
+
+    this.svgFileInput.onchange = (event) => {
+        if (event.target.files) {
+            this.setActive('svg');
+        }
+    };
+
+    // this.drawSidesButton.onclick = (event) => {
+    //     if (this.active !== 'draw') return;
+    //     let nSides = Number.parseInt(this.drawSides.value);
+    //     let c = new THREE.CatmullRomCurve3(circlePoints(nSides, Math.min(width, height) * 0.6));
+    //     c.closed = true;
+    //     this.drawEditor.setCurve(c);
+    // };
 
     this.onChange = onChange || (() => {});
 
@@ -72,5 +89,5 @@ export function ChooseDrawing(onChange, opt) {
         this.svgPreview.render();
     };
 
-    this.setActive('svg');
+    this.setActive('draw');
 }
