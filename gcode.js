@@ -1,3 +1,5 @@
+import * as THREE from './three.js/build/three.module.js';
+
 export const header = `;Begin Header
 M140 S$BED_TEMP  ; Set bed temperature
 M105
@@ -69,19 +71,25 @@ function calcExtrudePerMm(layerHeight, lineWidth) {
     return crossSectionArea / filamentCrossSection;
 }
 
-export function generateGcode(points, feedrate, lineWidth, layerHeight) {
+export function generateGcode(points, feedrate, lineWidth, layerHeight, bedsize) {
     let lines = [];
 
     let extrudePerMm = calcExtrudePerMm(layerHeight, lineWidth);
+    let origin = new THREE.Vector3(bedsize / 2, bedsize / 2, 0);
+    let scratch = new THREE.Vector3();
+    let offset = (point) => {
+        scratch.copy(point);
+        return scratch.add(origin);
+    }
 
-    lines.push(g1(points[0], 0) + '; start point');
+    lines.push(g1(offset(points[0]), 0) + '; start point');
     lines.push('G1 F2400 E5 ; reset extruder');
 
-    lines.push('G1 F${feedrate}');
+    lines.push(`G1 F${feedrate}`);
 
     for (var i = 1; i < points.length; i++) {
         let e = points[i].distanceTo(points[i - 1]) * extrudePerMm;
-        lines.push(g1(points[i], e));
+        lines.push(g1(offset(points[i]), e));
     }
     lines.push('', '');
     return lines.join('\n');

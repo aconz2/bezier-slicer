@@ -92,3 +92,13 @@ export function colorGradientToCenter(points, freq, width, center) {
     }
     return ret;
 }
+
+export function circlePoints(steps, diameter) {
+    var pts = [];
+    var r = diameter / 2;
+    var theta = 2 * Math.PI / steps;
+    for (var i = 0; i < steps; i++) {
+        pts.push(new THREE.Vector3(r * Math.cos(i * theta), r * Math.sin(i * theta), 0));
+    }
+    return pts;
+}

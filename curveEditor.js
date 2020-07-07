@@ -1,5 +1,5 @@
 import * as THREE from './three.js/build/three.module.js';
-import {vector3to2} from './util.js';
+import {circlePoints, vector3to2} from './util.js';
 
 function label(text, style) {
     style = style || {};
@@ -9,16 +9,6 @@ function label(text, style) {
         ret.style[k] = style[k];
     }
     return ret;
-}
-
-function circlePoints(steps, diameter) {
-    var pts = [];
-    var r = diameter / 2;
-    var theta = 2 * Math.PI / steps;
-    for (var i = 0; i < steps; i++) {
-        pts.push(new THREE.Vector3(r * Math.cos(i * theta), r * Math.sin(i * theta), 0));
-    }
-    return pts;
 }
 
 function curvePathLinePoints(path) {
@@ -106,16 +96,13 @@ export function CurveEditor(container, opt) {
     this.circleMaterial = new THREE.MeshBasicMaterial({color: circleColor});
 
     this.addCircle = (point) => {
-        console.log('addcircle')
         let circle = new THREE.Mesh(new THREE.CircleGeometry(circleSize, 32), this.circleMaterial);
-        console.log(point)
         circle.position.copy(point);
         this.scene.add(circle);
         return circle;
     };
 
     this.setCurve = (curve) => {
-        console.log('setCurve')
         this.cachedPoints = null;
         for (let c of this.circles) {
             this.scene.remove(c);

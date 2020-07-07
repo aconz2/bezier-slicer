@@ -1,12 +1,12 @@
 import {SVGPreview} from './svgPreview.js';
 import {CurveEditor} from './curveEditor.js';
 import {samplesvg} from './samplesvg.js';
+import {circlePoints} from './util.js';
 import * as THREE from './three.js/build/three.module.js';
 
 // TODO add the option in drawcurve to change between lines and catmull and an option to generate a new polygon with n sides
 
 function showOne(elements, idx) {
-    console.log(idx);
     for (var i = 0; i < elements.length; i++) {
         elements[i].style.display = i === idx ? 'unset' : 'none';
     }
@@ -53,13 +53,13 @@ export function ChooseDrawing(onChange, opt) {
         }
     };
 
-    // this.drawSidesButton.onclick = (event) => {
-    //     if (this.active !== 'draw') return;
-    //     let nSides = Number.parseInt(this.drawSides.value);
-    //     let c = new THREE.CatmullRomCurve3(circlePoints(nSides, Math.min(width, height) * 0.6));
-    //     c.closed = true;
-    //     this.drawEditor.setCurve(c);
-    // };
+    this.drawSidesButton.onclick = (event) => {
+        if (this.active !== 'draw') return;
+        let nSides = Number.parseInt(this.drawSides.value);
+        let c = new THREE.CatmullRomCurve3(circlePoints(nSides, size * 0.6));
+        c.closed = true;
+        this.drawEditor.setCurve(c);
+    };
 
     this.onChange = onChange || (() => {});
 

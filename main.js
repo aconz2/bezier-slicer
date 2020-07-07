@@ -200,12 +200,13 @@ function pointsToCurvePath(points) {
     return ret;
 }
 
-function formatBoundingBox(bbox) {
+function formatBoundingBox(bbox, bedsize) {
     let w = bbox.max.x - bbox.min.x;
     let l = bbox.max.y - bbox.min.y;
     let h = bbox.max.z - bbox.min.z;
     let f = (x) => x.toFixed(2);
-    return `${f(w)} × ${f(l)} × ${f(h)} | (${f(bbox.min.x)} — ${f(bbox.max.x)}, ${f(bbox.min.y)} — ${f(bbox.max.y)}, ${f(bbox.min.z)} — ${f(bbox.max.z)})`;
+    let g = (x) => (x + bedsize/2).toFixed(2);
+    return `${f(w)} × ${f(l)} × ${f(h)} | (${g(bbox.min.x)} — ${g(bbox.max.x)}, ${g(bbox.min.y)} — ${g(bbox.max.y)}, ${g(bbox.min.z)} — ${g(bbox.max.z)})`;
 }
 
 function autoExpand(el) {
@@ -250,12 +251,12 @@ function Gcode() {
         this.gcodeLinkElement.style.display = 'unset';
     };
 
-    this.generateGcode = (points) => {
+    this.generateGcode = (points, bedsize) => {
         let feedrate = Number.parseInt(this.gcodeFeedrateElement.value) * 60;
         let layerHeight = Number.parseFloat(this.layerHeightElement.value);
         let lineWidth = Number.parseFloat(this.lineWidthElement.value);
 
-        let code = G.generateGcode(points, feedrate, lineWidth, layerHeight);
+        let code = G.generateGcode(points, feedrate, lineWidth, layerHeight, bedsize);
         let subs = [
             [/\$BED_TEMP/g, this.bedTemperatureElement.value],
             [/\$HOTEND_TEMP/g, this.nozzleTemperatureElement.value],
@@ -273,7 +274,6 @@ function Main() {
     THREE.Object3D.DefaultUp = new THREE.Vector3(0,0,1);
 
     let divisionsEvery = 10;
-    let buildPlate = 220;
 
     const width = 600;
     const height = 400;
@@ -283,9 +283,10 @@ function Main() {
     this.segmentLength = 1;
     this.previewPointsPerLength = 0.1;
     this.curve = null;
-    this.clampDistance = this.layerHeight * 2;
+    this.clampDistance = 0.3;
     this.clampDistanceEnabled = false;
     this.points = [];
+    this.bedSize = 235;
 
     this.previewRainbow = true;
     this.previewRainbowType = 'distance';
@@ -304,6 +305,7 @@ function Main() {
     this.clampDistanceEnabledElement = document.querySelector('input[name="clampDistanceEnabled"]');
     this.clampDistanceElement = document.querySelector('input[name="clampDistance"]');
     this.segmentLengthElement = document.querySelector('input[name="segmentLength"]');
+    this.bedSizeElement = document.querySelector('input[name="bedSize"]');
 
     this.previewRainbowElement.checked = this.previewRainbow;
     this.clampDistanceEnabledElement.checked = this.clampDistanceEnabled;
@@ -320,7 +322,7 @@ function Main() {
 	scene.background = new THREE.Color(0x333333);
 
 	let camera = this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
-	camera.position.set(buildPlate, -buildPlate, buildPlate);
+	camera.position.set(this.bedSize, -this.bedSize, this.bedSize);
 
 	let controls = this.controls = new OrbitControls(camera, renderer.domElement);
 
@@ -329,7 +331,7 @@ function Main() {
 	light.position.copy(camera.position);
 	scene.add(light);
 
-	let grid = new THREE.GridHelper(buildPlate, buildPlate / divisionsEvery);
+	let grid = new THREE.GridHelper(this.bedSize, this.bedSize / divisionsEvery);
 	grid.rotateX(- Math.PI / 2 );
 	grid.material.opacity = 0.25;
 	grid.material.transparent = true;
@@ -366,13 +368,13 @@ function Main() {
         console.log(`Path length ${path.getLength().toFixed(2)}`)
 
         // TODO this can be simplified by only generating two points for a line if its longer than the min step length
-        console.time('covertToLines');
+        console.time('getPoints');
         let points = path.getSpacedPoints(Math.floor(path.getLength() / this.segmentLength));
         spacePoints(points, this.layerHeight, (this.layers + 1) * this.layerHeight);
         this.points = points;
-        console.timeEnd('covertToLines');
+        console.timeEnd('getPoints');
 
-        this.boundingBoxElement.innerText = formatBoundingBox(this.computeBoundingBox(points));
+        this.boundingBoxElement.innerText = formatBoundingBox(this.computeBoundingBox(points), this.bedSize);
 
         if (this.extrudedObject) scene.remove(this.extrudedObject);
         if (this.previewExtrude) {
@@ -410,7 +412,7 @@ function Main() {
 
     let rotationEditor = this.rotationEditor = new CurveEditor(document.querySelector('#rotationCurves'), {yRange: [-90, 90], showAxis: true});
     let scaleEditor = this.scaleEditor = new CurveEditor(document.querySelector('#scaleCurves'), {yRange: [0.5, 1.5], baseLine: 1, showAxis: true});
-    let chooseDrawing = this.chooseDrawing = new ChooseDrawing(() => {}, {size: buildPlate});
+    let chooseDrawing = this.chooseDrawing = new ChooseDrawing(() => {}, {size: this.bedSize});
 
     chooseDrawing.onChange = this.updateDebounce;
     scaleEditor.onChange = this.updateDebounce;
@@ -446,10 +448,13 @@ function Main() {
         this.previewRainbow = event.target.checked;
         this.updateDebounce();
     };
+    this.bedSizeElement.oninput = (event) => {
+        this.bedSize = Number.parseInt(event.target.value);
+        this.updateDebounce();
+    };
 
     for (let el of document.querySelectorAll('input[name="previewRainbowType"]')) {
         el.onchange = (event) => {
-            console.log(event)
             this.previewRainbowType = event.target.value;
             this.updateDebounce();
         };
@@ -470,8 +475,7 @@ let g = new Gcode();
 let generateGcodeElement = document.querySelector('#generateGcode');
 
 generateGcodeElement.onclick = () => {
-    console.log(main)
-    g.generateGcode(main.points)
+    g.generateGcode(main.points, main.bedSize);
 };
 
 main.animate()
