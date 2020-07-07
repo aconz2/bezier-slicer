@@ -4,11 +4,20 @@
 		<title>Bezier "Slicer"</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<!-- <link type="text/css" rel="stylesheet" href="main.css"> -->
 		<style>
 			body {
 				background-color: #777;
 			}
+            #curveEditors {
+                display: flex;
+                flex-direction: row;
+            }
+            #curveEditors > div {
+                padding-right: 10px;
+            }
+            #curveEditors h4 {
+                margin: 10px 0;
+            }
 		</style>
 	</head>
 	<body>
@@ -41,10 +50,14 @@
         <span id="boundingBox"></span>
       </div>
       <div id="curveEditors">
-        <h5>Rotation</h5>
-        <div id="rotationCurves"></div>
-        <h5>Scale</h5>
-        <div id="scaleCurves"></div>
+        <div>
+          <h4>Rotation</h4>
+          <div id="rotationCurves"></div>
+        </div>
+        <div>
+          <h4>Scale</h4>
+          <div id="scaleCurves"></div>
+        </div>
       </div>
       <div>
         <form id="chooseDrawingForm">

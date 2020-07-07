@@ -60,7 +60,6 @@ export function colorGradientToCenter(points, freq, width, center) {
     for (var i = 0; i < points.length; i++) {
         origin.setZ(points[i].z);
         let d = origin.distanceTo(points[i]);
-
         ret[i * 3]     = Math.sin(freq * d ) * width + center;
         ret[i * 3 + 1] = Math.sin(freq * d + 2) * width + center;
         ret[i * 3 + 2] = Math.sin(freq * d + 4) * width + center;

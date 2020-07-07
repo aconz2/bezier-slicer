@@ -122,10 +122,15 @@ function apply232(f, v) {
 }
 
 function rotateAndScaleCurve(curve, rotation, scaling, origin, prevCurve, clampDistance) {
-    // TODO allow clamping the point to a maxDistance
-    let f = (k) => rotateAndScalePoint(curve[k], rotation, scaling, origin, prevCurve[k], clampDistance);
-    if (c.type === 'LineCurve') return new THREE.LineCurve(f('v1'), f('v2'));
-    if (c.type === 'LineCurve3') return new THREE.LineCurve(apply232(f, partial(f, 'v1')), apply232(f, partial(f, 'v2')));
+    if (curve.type === 'LineCurve') {
+        let f = (k) => rotateAndScalePoint(curve[k], rotation, scaling, origin, prevCurve[k], clampDistance);
+        return new THREE.LineCurve(f('v1'), f('v2'));
+    }
+    if (curve.type === 'LineCurve3') {
+        // yea this is a mess
+        let f = (k, v) => rotateAndScalePoint(v, rotation, scaling, origin, vector3to2(prevCurve[k]), clampDistance);
+        return new THREE.LineCurve(apply232(partial(f, 'v1'), curve.v1), apply232(partial(f, 'v2'), curve.v2));
+    }
     throw Error(`Unhandled curve ${curve.type}`);
 }
 
@@ -320,14 +325,8 @@ function Main() {
 	        this.extrudedObject = new THREE.Mesh(geometry, this.extrudedMaterial);
         } else {
             this.lineGeometry.setFromPoints(points);
-            // this.extrudedObject.castShadow = true;
-            // this.extrudedObject.receiveShadow = true;
-            console.log(this.lineMaterial.colors)
             if (this.previewRainbow) {
                 let material = new THREE.LineBasicMaterial({vertexColors: THREE.VertexColors});
-                // this.lineMaterial.vertexColors = true;
-                // this.lineGeometry.colors = colorGradient(points.length);
-                // this.lineGeometry.colorsNeedUpdate = true;
                 if (this.previewRainbowType === 'distance') {
                     this.lineGeometry.setAttribute('color', new THREE.BufferAttribute(colorGradientToCenter(points, 0.2), 3));
                 } else {
@@ -336,7 +335,6 @@ function Main() {
                 this.extrudedObject = new THREE.Line(this.lineGeometry, material);
             } else {
                 this.lineMaterial.vertexColors = false;
-                // this.lineGeometry.colorsNeedUpdate = true;
                 this.extrudedObject = new THREE.Line(this.lineGeometry, this.lineMaterial);
             }
         }

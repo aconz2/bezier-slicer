@@ -2,7 +2,7 @@ import {SVGLoader} from './three.js/examples/jsm/loaders/SVGLoader.js';
 import {curveTo3At} from './util.js';
 import * as THREE from './three.js/build/three.module.js';
 
-export function SVGPreview(url, container, opt) {
+export function SVGPreview(container, opt) {
     opt = opt || {};
     this.container = container;
 
@@ -49,33 +49,45 @@ export function SVGPreview(url, container, opt) {
     this.lineMaterial = new THREE.MeshBasicMaterial({color: lineColor});
 
     this.meshes = [];
+    this.curves = [];
+    this.active = -1;
 
-    let loader = new SVGLoader();
-    loader.load(url, (data) => {
-        console.log(data)
-        let paths = [];
-        let geoms = [];
-        for (let path of data.paths) {
-            for (let subPath of path.subPaths) {
-                let curve = curveTo3At(subPath, 1);
-                let geom = new THREE.BufferGeometry();
-                let nPoints = Math.floor(curve.getLength() * pointsPerLength / subPath.curves.length);
-                let points = curve.getPoints(nPoints);
-                geom.setFromPoints(points);
-                let mesh = new THREE.Line(geom, this.lineMaterial);
-                this.meshes.push(mesh);
-                this.scene.add(mesh);
-                let option = document.createElement('option');
-                option.value = this.meshes.length - 1;
-                option.innerText = `Path ${option.value}`
-                this.select.appendChild(option);
-            }
+    this.load = (url) => {
+        this.meshes = [];
+        this.curves = [];
+        for (let child of this.select.querySelectorAll('option')) {
+            child.remove();
         }
-        this.focusOn(0);
-    });
+
+        let loader = new SVGLoader();
+        loader.load(url, (data) => {
+            console.log(data)
+            let paths = [];
+            let geoms = [];
+            for (let path of data.paths) {
+                for (let subPath of path.subPaths) {
+                    let curve = curveTo3At(subPath, 1);
+                    this.curves.push(curve);
+                    let geom = new THREE.BufferGeometry();
+                    let nPoints = Math.floor(curve.getLength() * pointsPerLength / subPath.curves.length);
+                    let points = curve.getPoints(nPoints);
+                    geom.setFromPoints(points);
+                    let mesh = new THREE.Line(geom, this.lineMaterial);
+                    this.meshes.push(mesh);
+                    this.scene.add(mesh);
+                    let option = document.createElement('option');
+                    option.value = this.meshes.length - 1;
+                    option.innerText = `Path ${option.value}`
+                    this.select.appendChild(option);
+                }
+            }
+            this.focusOn(0);
+        });
+    };
 
     this.focusOn = (i) => {
         if (i < 0 || i >= this.meshes.length) return;
+        this.active = i;
         for (let mesh of this.meshes) mesh.visible = false;
         this.meshes[i].visible = true;
         this.meshes[i].geometry.computeBoundingBox();
@@ -88,6 +100,16 @@ export function SVGPreview(url, container, opt) {
         this.onChange(this.meshes[i]);
     };
 
+    this.getCurve = () => {
+        if (this.curves.length === 0) {
+            return new THREE.CatmullRomCurve3([
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(100, 0, 0),
+            ]);
+        } else {
+            return this.curves[this.active];
+        }
+    }
 
     this.render = () => {
 	    this.renderer.render(this.scene, this.camera);
