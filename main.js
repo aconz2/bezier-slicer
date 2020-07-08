@@ -182,6 +182,24 @@ function circleShape(steps, diameter) {
     return new THREE.Shape(pts);
 }
 
+// function layerShape(steps, diameter, width) {
+//     if (steps % 2 === 1) steps += 1;
+//     let pts = [];
+//     let r = diameter / 2;
+//     let theta = 2 * Math.PI / steps;
+//     let pi2 = Math.PI / 2;
+//     // right half -pi/2 to pi/2
+//     for (let i = 0; i < steps / 2; i++) {
+//         pts.push(new THREE.Vector2(r * Math.cos(i * theta - pi2) + width/2, r * Math.sin(i * theta -pi2)));
+//     }
+//     // left half pi/2 to 3pi/2
+//     for (let i = 0; i < steps / 2; i++) {
+//         pts.push(new THREE.Vector2(r * Math.cos(i * theta - pi2) + width/2, r * Math.sin(i * theta -pi2)));
+//     }
+//     pts.push(pts[0]);
+//     return new THREE.Shape(pts);
+// }
+
 function spacePoints(points, min, max) {
     let diff = (max - min) / points.length;
     for (let i = 0; i < points.length; i++) {
