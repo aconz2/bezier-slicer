@@ -1,6 +1,6 @@
-import {SVGLoader} from './three.js/examples/jsm/loaders/SVGLoader.js';
+import {SVGLoader} from './three.js/SVGLoader.js';
 import {medianPoint, curveTo3At, centerCurve} from './util.js';
-import * as THREE from './three.js/build/three.module.js';
+import * as THREE from './three.js/three.module.js';
 
 export function SVGPreview(container, opt) {
     opt = opt || {};

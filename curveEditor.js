@@ -1,4 +1,4 @@
-import * as THREE from './three.js/build/three.module.js';
+import * as THREE from './three.js/three.module.js';
 import {circlePoints, vector3to2} from './util.js';
 
 function label(text, style) {

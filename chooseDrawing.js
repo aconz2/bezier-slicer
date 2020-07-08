@@ -2,7 +2,7 @@ import {SVGPreview} from './svgPreview.js';
 import {CurveEditor} from './curveEditor.js';
 import {samplesvg} from './samplesvg.js';
 import {circlePoints} from './util.js';
-import * as THREE from './three.js/build/three.module.js';
+import * as THREE from './three.js/three.module.js';
 
 // TODO add the option in drawcurve to change between lines and catmull and an option to generate a new polygon with n sides
 

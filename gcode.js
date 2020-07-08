@@ -1,4 +1,4 @@
-import * as THREE from './three.js/build/three.module.js';
+import * as THREE from './three.js/three.module.js';
 
 export const header = `;Begin Header
 M140 S$BED_TEMP  ; Set bed temperature

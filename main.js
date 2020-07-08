@@ -1,11 +1,10 @@
-import * as THREE from './three.js/build/three.module.js';
+import * as THREE from './three.js/three.module.js';
 // import {TrackballControls} from './three.js/examples/jsm/controls/TrackballControls.js';
-import {OrbitControls} from './three.js/examples/jsm/controls/OrbitControls.js';
+import {OrbitControls} from './three.js/OrbitControls.js';
 import {SVGPreview} from './svgPreview.js';
 import {CurveEditor} from './curveEditor.js';
 import {ChooseDrawing} from './chooseDrawing.js';
 import {medianPoint, colorGradient, colorGradientToCenter, debounce, curveTo3At, vector2to3, vector3to2} from './util.js';
-
 import * as G from './gcode.js';
 
 const distanceTol = 1e-6;
