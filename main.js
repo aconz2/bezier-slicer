@@ -265,10 +265,13 @@ function Gcode() {
         // TODO: do I need to hang onto the blob?
         let url = URL.createObjectURL(blob);
         this.gcodeLinkElement.href = url;
-        this.gcodeLinkElement.style.display = 'unset';
+        // give some visual indication that the new gcode is ready
+        setTimeout(() => {this.gcodeLinkElement.style.display = 'unset';}, 100);
+
     };
 
     this.generateGcode = (points, bedsize) => {
+        this.gcodeLinkElement.style.display = 'none';
         let feedrate = Number.parseInt(this.gcodeFeedrateElement.value) * 60;
         let layerHeight = Number.parseFloat(this.layerHeightElement.value);
         let lineWidth = Number.parseFloat(this.lineWidthElement.value);
